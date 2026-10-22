@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { sendChat } from '../api.js';
 import { canSpeak, listenAuto, speak, stopSpeaking } from '../speech.js';
@@ -46,47 +47,118 @@ const ideas = [
   ['🔋', 'Phone battery problem', 'How do I ask someone where I can charge my phone in Kannada?'],
   ['🧾', 'Ask for a receipt', 'How do I ask for a receipt after buying something in Kannada?'],
   ['🚪', 'Ask permission', 'How do I politely ask permission to enter a room or place in Kannada?']
-
 ];
 
 function Answer({ m, ctx }) {
   const [copied, setCopied] = useState(false);
   const c = m.card;
   const rate = ctx.rate;
+
   const copy = async () => {
-    try { await navigator.clipboard.writeText(c.kannada); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* clipboard blocked */ }
+    if (!c?.kannada) return;
+
+    try {
+      await navigator.clipboard.writeText(c.kannada);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard may be unavailable.
+    }
   };
+
   return (
     <div className="answer">
-      <p className="label"><Icon name="spark" size={16} /> Saathi's recommendation</p>
+      <p className="label">
+        <Icon name="spark" size={16} /> Saathi's recommendation
+      </p>
+
       <div className="abox">
         <p className={m.error ? 'err' : ''}>{m.text}</p>
+
         {c && (
           <>
             <div className="kcard">
               <div className="row between">
                 <span className="chip mint">Say this</span>
-                {canSpeak && <button className="chip ind" onClick={() => speak(c.kannada, 'kn-IN', rate)}><Icon name="volume" size={14} /> {rate === 1 ? '1.0' : '0.75'}x</button>}
+                {canSpeak && (
+                  <button
+                    className="chip ind"
+                    onClick={() => speak(c.kannada, 'kn-IN', rate)}
+                  >
+                    <Icon name="volume" size={14} />
+                    {rate === 1 ? '1.0' : '0.75'}x
+                  </button>
+                )}
               </div>
+
               <p className="kn big">{c.kannada}</p>
               {c.reading && <p className="roman lg">{c.reading}</p>}
               {c.meaning && <p className="mean">“{c.meaning}”</p>}
             </div>
-            {c.words.length > 0 && (
+
+            {c.words?.length > 0 && (
               <>
                 <p className="label sm">WORD BREAKDOWN</p>
-                <div className="words">{c.words.map((w, i) => <div key={i} className="wtile"><b className="kn">{w.kn}</b><span className="roman">{w.roman}</span><small>{w.en}</small></div>)}</div>
+                <div className="words">
+                  {c.words.map((word, i) => (
+                    <div key={i} className="wtile">
+                      <b className="kn">{word.kn}</b>
+                      <span className="roman">{word.roman}</span>
+                      <small>{word.en}</small>
+                    </div>
+                  ))}
+                </div>
               </>
             )}
-            {c.tip && <div className="tip"><Icon name="bulb" size={20} /><p>{c.tip}</p></div>}
+
+            {c.tip && (
+              <div className="tip">
+                <Icon name="bulb" size={20} />
+                <p>{c.tip}</p>
+              </div>
+            )}
+
             <div className="row">
-              {canSpeak && <button className="btn soft" onClick={() => speak(c.kannada, 'kn-IN', rate)}><Icon name="volume" size={16} /> Listen</button>}
-              <button className="btn soft" onClick={copy}><Icon name={copied ? 'check' : 'copy'} size={16} /> {copied ? 'Copied' : 'Copy text'}</button>
-              <button className="btn soft" onClick={() => ctx.onShow({ kannada: c.kannada, english: c.meaning })}><Icon name="expand" size={16} /> Show</button>
+              {canSpeak && (
+                <button
+                  className="btn soft"
+                  onClick={() => speak(c.kannada, 'kn-IN', rate)}
+                >
+                  <Icon name="volume" size={16} /> Listen
+                </button>
+              )}
+
+              <button className="btn soft" onClick={copy}>
+                <Icon name={copied ? 'check' : 'copy'} size={16} />
+                {copied ? 'Copied' : 'Copy text'}
+              </button>
+
+              <button
+                className="btn soft"
+                onClick={() =>
+                  ctx.onShow({
+                    kannada: c.kannada,
+                    english: c.meaning
+                  })
+                }
+              >
+                <Icon name="expand" size={16} /> Show
+              </button>
             </div>
           </>
         )}
-        {m.phrases?.map((p) => <PhraseCard key={p._id} phrase={p} name={ctx.names[p.category]} isFav={ctx.favs.includes(p._id)} onFav={ctx.onFav} onShow={ctx.onShow} rate={rate} />)}
+
+        {m.phrases?.map((phrase) => (
+          <PhraseCard
+            key={phrase._id}
+            phrase={phrase}
+            name={ctx.names[phrase.category]}
+            isFav={ctx.favs.includes(phrase._id)}
+            onFav={ctx.onFav}
+            onShow={ctx.onShow}
+            rate={rate}
+          />
+        ))}
       </div>
     </div>
   );
@@ -96,82 +168,147 @@ export default function Chat(ctx) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
-  const [aiLive, setAiLive] = useState(null); // what the server actually used for the last answer
+  const [aiLive, setAiLive] = useState(null);
   const [proc, setProc] = useState(false);
   const [live, setLive] = useState(false);
   const [speechLang, setSpeechLang] = useState('hi');
   const [err, setErr] = useState('');
+
   const end = useRef(null);
   const rec = useRef(null);
+  const speechRun = useRef(0);
 
   const aiOn = aiLive ?? (ctx.caps.ai && ctx.caps.aiOk !== false);
-  const newChat = () => { setMessages([]); setAiLive(null); setErr(''); ctx.refreshCaps(); };
-  useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages, busy]);
+
+  const newChat = () => {
+    speechRun.current += 1;
+    stopSpeaking();
+    setMessages([]);
+    setAiLive(null);
+    setErr('');
+    ctx.refreshCaps();
+  };
+
+  useEffect(() => {
+    end.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'end'
+    });
+  }, [messages, busy]);
 
   async function send(raw) {
     const message = raw.trim();
     if (!message || busy) return;
-    const history = messages.filter((m) => !m.error && m.text).map((m) => ({ role: m.from === 'me' ? 'user' : 'assistant', content: m.text }));
-    setText(''); setErr(''); setBusy(true);
-    setMessages((m) => [...m, { from: 'me', text: message }]);
-    try {
-     
-      const r = await sendChat(message, history);
 
-      setMessages((m) => [
-        ...m,
+    speechRun.current += 1;
+    stopSpeaking();
+
+    const history = messages
+      .filter((m) => !m.error && m.text)
+      .map((m) => ({
+        role: m.from === 'me' ? 'user' : 'assistant',
+        content: m.text
+      }));
+
+    setText('');
+    setErr('');
+    setBusy(true);
+    setMessages((previous) => [
+      ...previous,
+      { from: 'me', text: message }
+    ]);
+
+    const currentRun = speechRun.current;
+
+    try {
+      const r = await sendChat(message, history);
+      const phrases = Array.isArray(r.phrases) ? r.phrases : [];
+
+      setMessages((previous) => [
+        ...previous,
         {
           from: 'bot',
           text: r.reply,
           card: r.card || null,
-          phrases: r.phrases || []
+          phrases
         }
       ]);
 
-      if (typeof r.ai === 'boolean') setAiLive(r.ai);
-   
-      // Automatically speak the Kannada answer
-      if (r.card?.kannada) {
-        window.setTimeout(() => {
-          speak(r.card.kannada, 'kn-IN', ctx.rate);
-        }, 300);
+      if (typeof r.ai === 'boolean') {
+        setAiLive(r.ai);
       }
 
-    } catch (e) {
+      // Speak the AI card, or speak each returned Kannada phrase in order.
+      const toSpeak = r.card?.kannada
+        ? [r.card.kannada]
+        : phrases
+            .map((phrase) => phrase.kannada)
+            .filter(
+              (line) => typeof line === 'string' && line.trim()
+            );
 
-      setMessages((m) => [...m, { from: 'bot', error: true, text: e.message, card: null, phrases: [] }]);
+      if (canSpeak && toSpeak.length > 0) {
+        window.setTimeout(async () => {
+          for (const line of toSpeak) {
+            if (currentRun !== speechRun.current) return;
+
+            try {
+              await speak(line, 'kn-IN', ctx.rate);
+            } catch (error) {
+              console.error('Automatic speech failed:', error);
+              return;
+            }
+          }
+        }, 300);
+      }
+    } catch (error) {
+      setMessages((previous) => [
+        ...previous,
+        {
+          from: 'bot',
+          error: true,
+          text: error.message || 'Could not get a response. Please try again.',
+          card: null,
+          phrases: []
+        }
+      ]);
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
 
- 
-function mic() {
-  if (live) {
-    try {
-      rec.current?.stop();
-    } catch {
-      /* already stopped */
+  function mic() {
+    if (live) {
+      try {
+        rec.current?.stop();
+      } catch {
+        // The recorder may already have stopped.
+      }
+      return;
     }
-    return;
+
+    speechRun.current += 1;
+    stopSpeaking();
+    setErr('');
+    setLive(true);
+
+    rec.current = listenAuto(
+      {
+        onText: send,
+        onError: setErr,
+        onEnd: () => {
+          setLive(false);
+          setProc(false);
+        },
+        onProcessing: () => setProc(true),
+        onStarted: (recorder) => {
+          rec.current = recorder;
+        }
+      },
+      ctx.caps.stt,
+      speechLang
+    );
   }
-
-  setErr('');
-  stopSpeaking();
-  setLive(true);
-
-  rec.current = listenAuto({
-    onText: send,
-    onError: setErr,
-    onEnd: () => {
-      setLive(false);
-      setProc(false);
-    },
-    onProcessing: () => setProc(true),
-    onStarted: (r) => {
-      rec.current = r;
-    }
-  }, ctx.caps.stt, speechLang);
-}
 
   return (
     <section aria-label="Ask Saathi">
@@ -179,37 +316,137 @@ function mic() {
         <>
           <div className="hero-card">
             <div className="row gap">
-              <div className="avatar"><Icon name="spark" size={30} /></div>
-              <div><h2>Saathi (ಸಾಥಿ)</h2><span className="chip lav up">AI companion</span></div>
+              <div className="avatar">
+                <Icon name="spark" size={30} />
+              </div>
+              <div>
+                <h2>Saathi (ಸಾಥಿ)</h2>
+                <span className="chip lav up">AI companion</span>
+              </div>
             </div>
-            <p>Your friendly Karnataka conversation helper. Ask anything: ordering food, bargaining with an auto driver, or talking to a villager.</p>
-            <div className="row"><span className="chip ind">{aiOn ? 'Powered by Claude' : 'Basic mode: saved phrases'}</span></div>
-            {!ctx.caps.ai && <p className="hint">Add ANTHROPIC_API_KEY on the server for full AI answers.</p>}
-            {ctx.caps.ai && !aiOn && <p className="hint">The AI is not responding right now, so I am using saved phrases. Open /api/health/ai on the server to see why.</p>}
+
+            <p>
+              Your friendly Karnataka conversation helper. Ask anything:
+              ordering food, bargaining with an auto driver, or talking to a villager.
+            </p>
+
+            <div className="row">
+              <span className="chip ind">
+                {aiOn ? 'Powered by Gemini' : 'Basic mode: saved phrases'}
+              </span>
+            </div>
+
+            {!ctx.caps.ai && (
+              <p className="hint">
+                Add GEMINI_API_KEY on the server for full AI answers.
+              </p>
+            )}
+
+            {ctx.caps.ai && !aiOn && (
+              <p className="hint">
+                AI is not responding right now, so I am using saved phrases.
+                Check the server AI health endpoint for details.
+              </p>
+            )}
           </div>
-          <div className="row between"><h3 className="sec">Daily situations</h3><span className="hint">Tap to ask</span></div>
-          <div className="scroll">{ideas.map(([e, label, prompt]) => <button key={label} className="cat" onClick={() => send(prompt)}>{e} {label}</button>)}</div>
+
+          <div className="row between">
+            <h3 className="sec">Daily situations</h3>
+            <span className="hint">Tap to ask</span>
+          </div>
+
+          <div className="scroll">
+            {ideas.map(([emoji, label, prompt]) => (
+              <button
+                key={label}
+                className="cat"
+                onClick={() => send(prompt)}
+                disabled={busy}
+              >
+                {emoji} {label}
+              </button>
+            ))}
+          </div>
         </>
       )}
+
       <div className="log">
-        {messages.map((m, i) => m.from === 'me' ? <div key={i} className="me-b">{m.text}</div> : <Answer key={i} m={m} ctx={ctx} />)}
-        {busy && <div className="typing"><i /><i /><i /></div>}
+        {messages.map((message, index) =>
+          message.from === 'me' ? (
+            <div key={index} className="me-b">
+              {message.text}
+            </div>
+          ) : (
+            <Answer key={index} m={message} ctx={ctx} />
+          )
+        )}
+
+        {busy && (
+          <div className="typing">
+            <i />
+            <i />
+            <i />
+          </div>
+        )}
+
         <div ref={end} />
       </div>
+
       {err && <p className="note err">{err}</p>}
+
       <div className="fixbar composer">
         <select
-  value={speechLang}
-  onChange={(e) => setSpeechLang(e.target.value)}
-  aria-label="Speech language"
->
-  <option value="hi">हिन्दी</option>
-  <option value="en">English</option>
-</select>
-        <button className={`iconbtn ${live ? 'live' : ''}`} onClick={mic} aria-label={live ? (proc ? 'Transcribing' : 'Stop listening') : 'Speak your question'}><Icon name="mic" size={20} /></button>
-        <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send(text)} placeholder="Ask in English, Hindi, or ಕನ್ನಡ..." maxLength={200} aria-label="Message" />
-        {messages.length > 0 && <button className="iconbtn" onClick={newChat} aria-label="New chat"><Icon name="x" size={18} /></button>}
-        <button className="send" onClick={() => send(text)} disabled={busy || !text.trim()} aria-label="Send"><Icon name="send" size={18} /></button>
+          value={speechLang}
+          onChange={(event) => setSpeechLang(event.target.value)}
+          aria-label="Speech language"
+        >
+          <option value="hi">हिन्दी</option>
+          <option value="en">English</option>
+        </select>
+
+        <button
+          className={`iconbtn ${live ? 'live' : ''}`}
+          onClick={mic}
+          aria-label={
+            live
+              ? proc
+                ? 'Transcribing'
+                : 'Stop listening'
+              : 'Speak your question'
+          }
+        >
+          <Icon name="mic" size={20} />
+        </button>
+
+        <input
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') send(text);
+          }}
+          placeholder="Ask in English, Hindi, or ಕನ್ನಡ..."
+          maxLength={200}
+          aria-label="Message"
+        />
+
+        {messages.length > 0 && (
+          <button
+            className="iconbtn"
+            onClick={newChat}
+            aria-label="New chat"
+          >
+            <Icon name="x" size={18} />
+          </button>
+        )}
+
+        <button
+          className="send"
+          onClick={() => send(text)}
+          disabled={busy || !text.trim()}
+          aria-label="Send"
+        >
+          <Icon name="send" size={18} />
+        </button>
       </div>
     </section>
   );

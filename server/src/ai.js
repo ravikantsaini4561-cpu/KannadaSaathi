@@ -1,23 +1,49 @@
-
-const model = () => process.env.GEMINI_MODEL || 'gemini-3.6-flash';
-
-export const aiEnabled = () => Boolean(process.env.GEMINI_API_KEY);
-
 export const aiState = { ok: null, error: '' };
 
+const model = () =>
+  process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+
+export const aiEnabled = () =>
+  Boolean(process.env.GEMINI_API_KEY);
+
 export async function gemini(system, messages, maxTokens = 400) {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY is not set in server/.env');
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is missing from the server environment.');
+  }
+
+  // Gemini uses "model" for assistant messages.
+  // Merge consecutive messages with the same role.
+  const contents = [];
+
+  for (const item of messages || []) {
+    if (!['user', 'assistant', 'model'].includes(item.role)) continue;
+    if (typeof item.content !== 'string' || !item.content.trim()) continue;
+
+    const role = item.role === 'assistant' ? 'model' : item.role;
+    const content = item.content.trim();
+    const previous = contents[contents.length - 1];
+
+    if (previous && previous.role === role) {
+      previous.parts[0].text += '\n' + content;
+    } else {
+      contents.push({
+        role,
+        parts: [{ text: content }]
+      });
     }
+  }
 
-    const contents = messages.map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    }));
+  while (contents.length && contents[0].role !== 'user') {
+    contents.shift();
+  }
 
+  if (!contents.length || contents[contents.length - 1].role !== 'user') {
+    throw new Error('Gemini needs a conversation ending with a user message.');
+  }
+
+  try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model()}:generateContent`,
       {
@@ -34,7 +60,6 @@ export async function gemini(system, messages, maxTokens = 400) {
           contents,
           generationConfig: {
             maxOutputTokens: maxTokens,
-            temperature: 0.3,
             responseMimeType: 'application/json'
           }
         })
@@ -51,28 +76,19 @@ export async function gemini(system, messages, maxTokens = 400) {
       );
     }
 
-    const candidate = data?.candidates?.[0];
+    const output = (data.candidates?.[0]?.content?.parts || [])
+      .map((part) => part.text || '')
+      .join('')
+      .trim();
 
-const result = candidate?.content?.parts
-  ?.map((part) => part.text || '')
-  .join('')
-  .trim();
-
-if (!result) {
-  const reason =
-    candidate?.finishReason ||
-    data?.promptFeedback?.blockReason ||
-    'No candidate or text returned';
-
-  throw new Error(
-    `Gemini returned no text. Reason: ${reason}`
-  );
-}
+    if (!output) {
+      throw new Error('Gemini returned an empty response.');
+    }
 
     aiState.ok = true;
     aiState.error = '';
 
-    return result;
+    return output;
   } catch (error) {
     aiState.ok = false;
     aiState.error = error.message;
@@ -83,9 +99,9 @@ if (!result) {
 export async function aiPing() {
   try {
     await gemini(
-      'Reply with a JSON object containing status set to OK.',
+      'Reply with the single word OK.',
       [{ role: 'user', content: 'ping' }],
-      1024
+      20
     );
 
     return { ok: true, model: model() };
@@ -98,14 +114,14 @@ export async function aiPing() {
   }
 }
 
+// Rate limit: maximum calls per minute per IP and bucket.
 const hits = new Map();
 
 export function limited(ip, bucket = 'ai', max = 30) {
   const key = `${bucket}:${ip}`;
   const now = Date.now();
-  const recent = (hits.get(key) || []).filter(
-    (time) => now - time < 60000
-  );
+  const recent = (hits.get(key) || [])
+    .filter((timestamp) => now - timestamp < 60000);
 
   recent.push(now);
   hits.set(key, recent);

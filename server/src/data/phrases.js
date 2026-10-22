@@ -72,5 +72,76 @@ export default [
   p('festival', 'What time does the procession start?', 'Julus kab shuru hoga?', 'ಮೆರವಣಿಗೆ ಯಾವಾಗ ಶುರುವಾಗುತ್ತದೆ?', 'Meravanige yaavaaga shuruvaaguttade?', 'procession time parade'),
   p('festival', 'May I join you?', 'Kya main shaamil ho sakta hoon?', 'ನಾನೂ ಸೇರಬಹುದೇ?', 'Naanoo serabahude?', 'join dance'),
   p('festival', 'Where is the temple?', 'Mandir kahan hai?', 'ದೇವಸ್ಥಾನ ಎಲ್ಲಿದೆ?', 'Devasthaana ellide?', 'temple'),
-  p('festival', 'What is this festival called?', 'Is tyohaar ka naam kya hai?', 'ಈ ಹಬ್ಬದ ಹೆಸರೇನು?', 'Ee habbada hesarenu?', 'festival name')
+  p('festival', 'What is this festival called?', 'Is tyohaar ka naam kya hai?', 'ಈ ಹಬ್ಬದ ಹೆಸರೇನು?', 'Ee habbada hesarenu?', 'festival name'),
+  
+  // Additional everyday conversation and introductions
+  p('village', 'Hello.', 'Namaste.', 'ನಮಸ್ಕಾರ.', 'Namaskaara.', 'hello greeting namaste'),
+  p('village', 'How are you?', 'Aap kaise hain?', 'ನೀವು ಹೇಗಿದ್ದೀರಿ?', 'Neevu hegiddiri?', 'how are you greeting'),
+  p('village', 'I am fine.', 'Main theek hoon.', 'ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ.', 'Naanu chennagiddene.', 'fine okay well'),
+  p('village', 'What is your name?', 'Aapka naam kya hai?', 'ನಿಮ್ಮ ಹೆಸರೇನು?', 'Nimma hesarenu?', 'name introduction'),
+  p('village', 'My name is Ravi.', 'Mera naam Ravi hai.', 'ನನ್ನ ಹೆಸರು ರವಿ.', 'Nanna hesaru Ravi.', 'name introduction ravi'),
+  p('village', 'Where are you from?', 'Aap kahan se hain?', 'ನೀವು ಎಲ್ಲಿಂದ ಬಂದಿದ್ದೀರಿ?', 'Neevu ellinda bandiddiri?', 'from place introduction'),
+  p('village', 'I speak Hindi.', 'Main Hindi bolta hoon.', 'ನಾನು ಹಿಂದಿ ಮಾತನಾಡುತ್ತೇನೆ.', 'Naanu Hindi maatanaaduttene.', 'hindi language speak'),
+  p('village', 'Nice to meet you.', 'Aapse milkar achha laga.', 'ನಿಮ್ಮನ್ನು ಭೇಟಿಯಾಗಿ ಸಂತೋಷವಾಯಿತು.', 'Nimmannu bhetiyaagi santoshavaayitu.', 'meet greeting'),
+  p('village', 'See you again.', 'Phir milenge.', 'ಮತ್ತೆ ಭೇಟಿಯಾಗೋಣ.', 'Matte bhetiyaagona.', 'goodbye meet again'),
+
+  // Everyday conversation
+  p('village', 'Yes.', 'Haan.', 'ಹೌದು.', 'Howdu.', 'yes agree'),
+  p('village', 'No.', 'Nahi.', 'ಇಲ್ಲ.', 'Illa.', 'no refuse'),
+  p('village', 'Okay.', 'Theek hai.', 'ಸರಿ.', 'Sari.', 'okay agree'),
+  p('village', 'Please.', 'Kripya.', 'ದಯವಿಟ್ಟು.', 'Dayavittu.', 'please request'),
+  p('village', 'Sorry, excuse me.', 'Maaf kijiye.', 'ಕ್ಷಮಿಸಿ.', 'Kshamisi.', 'sorry excuse'),
+  p('village', "I didn't understand.", 'Mujhe samajh nahi aaya.', 'ನನಗೆ ಅರ್ಥವಾಗಲಿಲ್ಲ.', 'Nanage arthavaagalilla.', 'understand repeat'),
+  p('village', 'Please say it again.', 'Dobara kahiye.', 'ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಹೇಳಿ.', 'Dayavittu mattomme heli.', 'repeat again speak'),
+  p('village', 'What does this mean?', 'Iska kya matlab hai?', 'ಇದರ ಅರ್ಥವೇನು?', 'Idara arthavenu?', 'meaning explain'),
+  p('village', 'Do you understand Hindi?', 'Kya aap Hindi samajhte hain?', 'ನಿಮಗೆ ಹಿಂದಿ ಅರ್ಥವಾಗುತ್ತದೆಯೇ?', 'Nimage Hindi arthavaaguttadeye?', 'hindi understand language'),
+
+  // Food and restaurant
+  p('food', 'I need water.', 'Mujhe paani chahiye.', 'ನನಗೆ ನೀರು ಬೇಕು.', 'Nanage neeru beku.', 'water need drink'),
+  p('food', 'I am hungry.', 'Mujhe bhookh lagi hai.', 'ನನಗೆ ಹಸಿವಾಗಿದೆ.', 'Nanage hasivaagide.', 'hungry food eat'),
+  p('food', 'I am thirsty.', 'Mujhe pyaas lagi hai.', 'ನನಗೆ ಬಾಯಾರಿಕೆಯಾಗಿದೆ.', 'Nanage baayaarikeyagide.', 'thirsty water drink'),
+  p('food', 'Where can I get food?', 'Khana kahan milega?', 'ಊಟ ಎಲ್ಲಿ ಸಿಗುತ್ತದೆ?', 'Oota elli siguttade?', 'food meal hungry'),
+  p('food', 'Show me the menu.', 'Menu dikhaiye.', 'ಮೆನು ತೋರಿಸಿ.', 'Menu torisi.', 'menu restaurant order'),
+  p('food', 'I want vegetarian food.', 'Mujhe shakahari khana chahiye.', 'ನನಗೆ ಸಸ್ಯಾಹಾರಿ ಊಟ ಬೇಕು.', 'Nanage sasyahaari oota beku.', 'vegetarian food meal'),
+  p('food', 'Please bring the bill.', 'Bill dijiye.', 'ಬಿಲ್ ಕೊಡಿ.', 'Bill kodi.', 'bill payment restaurant'),
+
+  // Transport and directions
+  p('transport', 'Where is the bus stand?', 'Bus stand kahan hai?', 'ಬಸ್ ನಿಲ್ದಾಣ ಎಲ್ಲಿದೆ?', 'Bus nildaana ellide?', 'bus stand stop station'),
+  p('transport', 'I need to go there.', 'Mujhe wahan jaana hai.', 'ನಾನು ಅಲ್ಲಿಗೆ ಹೋಗಬೇಕು.', 'Naanu allige hogabeku.', 'go travel destination'),
+  p('transport', 'Is this the right way?', 'Kya yeh sahi raasta hai?', 'ಇದು ಸರಿಯಾದ ದಾರಿಯೇ?', 'Idu sariyaada daariye?', 'way road direction'),
+  p('transport', 'How far is it?', 'Yeh kitni door hai?', 'ಎಷ್ಟು ದೂರ ಇದೆ?', 'Eshtu doora ide?', 'distance far'),
+  p('transport', 'Please call an auto.', 'Auto bulaiye.', 'ದಯವಿಟ್ಟು ಆಟೋ ಕರೆಸಿ.', 'Dayavittu auto karesi.', 'auto rickshaw call'),
+  p('transport', "I don't know the way.", 'Mujhe raasta nahi pata.', 'ನನಗೆ ದಾರಿ ಗೊತ್ತಿಲ್ಲ.', 'Nanage daari gottilla.', 'lost way direction'),
+
+  // College and study
+  p('college', 'When will the class start?', 'Class kab shuru hogi?', 'ತರಗತಿ ಯಾವಾಗ ಶುರುವಾಗುತ್ತದೆ?', 'Taragati yaavaga shuruvaaguttade?', 'class start time'),
+  p('college', 'I need help.', 'Mujhe madad chahiye.', 'ನನಗೆ ಸಹಾಯ ಬೇಕು.', 'Nanage sahaaya beku.', 'help assistance'),
+  p('college', 'When is the exam?', 'Pariksha kab hai?', 'ಪರೀಕ್ಷೆ ಯಾವಾಗ ಇದೆ?', 'Pareekshe yaavaga ide?', 'exam test date'),
+  p('college', 'Please explain this to me.', 'Mujhe yeh samjhaiye.', 'ದಯವಿಟ್ಟು ಇದನ್ನು ನನಗೆ ವಿವರಿಸಿ.', 'Dayavittu idannu nanage vivarisi.', 'explain understand study'),
+  p('college', 'Can I borrow your notes?', 'Kya main aapke notes le sakta hoon?', 'ನಿಮ್ಮ ನೋಟ್ಸ್ ತೆಗೆದುಕೊಳ್ಳಬಹುದೇ?', 'Nimma notes tegedukollabahude?', 'notes borrow study'),
+
+  // Shopping and payments
+  p('mall', 'How much does this cost?', 'Iski keemat kitni hai?', 'ಇದರ ಬೆಲೆ ಎಷ್ಟು?', 'Idara bele eshtu?', 'price cost shopping'),
+  p('mall', 'This is very expensive.', 'Yeh bahut mehenga hai.', 'ಇದು ತುಂಬಾ ದುಬಾರಿಯಾಗಿದೆ.', 'Idu tumbaa dubaariyaagide.', 'expensive price'),
+  p('mall', 'Please reduce the price a little.', 'Thoda kam kijiye.', 'ಸ್ವಲ್ಪ ಕಡಿಮೆ ಮಾಡಿ.', 'Swalpa kadime maadi.', 'bargain reduce price'),
+  p('mall', 'I want this.', 'Mujhe yeh chahiye.', 'ನನಗೆ ಇದು ಬೇಕು.', 'Nanage idu beku.', 'want buy shopping'),
+  p('mall', "I don't want this.", 'Mujhe yeh nahi chahiye.', 'ನನಗೆ ಇದು ಬೇಡ.', 'Nanage idu beda.', 'dont want shopping'),
+  p('mall', 'Do you accept UPI?', 'Kya aap UPI lete hain?', 'ನೀವು UPI ಸ್ವೀಕರಿಸುತ್ತೀರಾ?', 'Neevu UPI sveekarisutteera?', 'upi payment pay'),
+  p('mall', 'I need a receipt.', 'Mujhe receipt chahiye.', 'ನನಗೆ ರಸೀದಿ ಬೇಕು.', 'Nanage raseedi beku.', 'receipt bill payment'),
+  p('mall', 'Do you have another size?', 'Kya doosri size hai?', 'ಬೇರೆ ಗಾತ್ರ ಇದೆಯೇ?', 'Bere gaatra ideye?', 'size clothes shopping'),
+
+  // Healthcare and emergencies
+  p('healthcare', 'I am in pain.', 'Mujhe dard ho raha hai.', 'ನನಗೆ ನೋವಾಗುತ್ತಿದೆ.', 'Nanage novaaguttide.', 'pain hurt doctor'),
+  p('healthcare', 'Call an ambulance.', 'Ambulance bulaiye.', 'ಆಂಬ್ಯುಲೆನ್ಸ್ ಕರೆಸಿ.', 'Ambulance karesi.', 'ambulance emergency'),
+  p('healthcare', 'I need medicine.', 'Mujhe dawa chahiye.', 'ನನಗೆ ಔಷಧಿ ಬೇಕು.', 'Nanage aushadhi beku.', 'medicine pharmacy'),
+  p('healthcare', 'Please help me.', 'Kripya meri madad kijiye.', 'ದಯವಿಟ್ಟು ನನಗೆ ಸಹಾಯ ಮಾಡಿ.', 'Dayavittu nanage sahaaya maadi.', 'help emergency'),
+  p('healthcare', 'Call the police.', 'Police ko bulaiye.', 'ಪೊಲೀಸರಿಗೆ ಕರೆ ಮಾಡಿ.', 'Policege kare maadi.', 'police emergency help'),
+  p('healthcare', 'I need a doctor.', 'Mujhe doctor chahiye.', 'ನನಗೆ ವೈದ್ಯರು ಬೇಕು.', 'Nanage vaidyaru beku.', 'doctor'),
+
+  // Useful Kannada-learning phrases
+  p('village', 'What are you doing?', 'Aap kya kar rahe hain?', 'ನೀವು ಏನು ಮಾಡುತ್ತಿದ್ದೀರಿ?', 'Neevu enu maaduttiddiri?', 'doing conversation'),
+  p('village', 'Where are you going?', 'Aap kahan ja rahe hain?', 'ನೀವು ಎಲ್ಲಿಗೆ ಹೋಗುತ್ತಿದ್ದೀರಿ?', 'Neevu ellige hoguttiddiri?', 'going destination'),
+  p('village', 'I want to learn Kannada.', 'Mujhe Kannada seekhni hai.', 'ನಾನು ಕನ್ನಡ ಕಲಿಯಬೇಕು.', 'Naanu Kannada kaliyabeku.', 'learn kannada language'),
+  p('village', 'How do you say this in Kannada?', 'Ise Kannada mein kaise kehte hain?', 'ಇದನ್ನು ಕನ್ನಡದಲ್ಲಿ ಹೇಗೆ ಹೇಳುತ್ತಾರೆ?', 'Idannu Kannadadalli hege heluttare?', 'translate kannada language'),
+  p('village', 'I want to practice.', 'Mujhe abhyas karna hai.', 'ನಾನು ಅಭ್ಯಾಸ ಮಾಡಬೇಕು.', 'Naanu abhyaasa maadabeku.', 'practice learn')
 ];
