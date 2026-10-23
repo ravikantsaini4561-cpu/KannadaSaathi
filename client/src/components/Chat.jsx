@@ -165,7 +165,13 @@ function Answer({ m, ctx }) {
 }
 
 export default function Chat(ctx) {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('ks-chat')) ?? [];
+    } catch {
+      return [];
+    }
+  });
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [aiLive, setAiLive] = useState(null);
@@ -180,12 +186,25 @@ export default function Chat(ctx) {
 
   const aiOn = aiLive ?? (ctx.caps.ai && ctx.caps.aiOk !== false);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('ks-chat', JSON.stringify(messages));
+    } catch {
+      // Storage unavailable.
+    }
+  }, [messages]);
+
   const newChat = () => {
     speechRun.current += 1;
     stopSpeaking();
     setMessages([]);
     setAiLive(null);
     setErr('');
+    try {
+      localStorage.removeItem('ks-chat');
+    } catch {
+      // Storage unavailable.
+    }
     ctx.refreshCaps();
   };
 
@@ -355,7 +374,7 @@ export default function Chat(ctx) {
             <span className="hint">Tap to ask</span>
           </div>
 
-          <div className="scroll">
+          <div className="scroll wrap-situations">
             {ideas.map(([emoji, label, prompt]) => (
               <button
                 key={label}

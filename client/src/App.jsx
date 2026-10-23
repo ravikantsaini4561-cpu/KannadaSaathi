@@ -62,12 +62,25 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <div className="logo"><Icon name="translate" size={22} /></div>
+        {tab === 'ask' ? (
+          <button className="iconbtn back-btn" onClick={() => setTab('browse')} aria-label="Return back to phrases" title="Return back to phrases">
+            <Icon name="swap" size={20} />
+          </button>
+        ) : (
+          <div className="logo"><Icon name="translate" size={22} /></div>
+        )}
         <div><h1>KannadaSaathi <span className="chip mint">Karnataka</span></h1><p><span className="kn-s">ಕನ್ನಡ ಸಾಥಿ</span> · {title}</p></div>
+        {tab === 'ask' && (
+          <button className="btn soft return-btn" onClick={() => setTab('browse')} aria-label="Return back">
+            <Icon name="swap" size={16} /> Return back
+          </button>
+        )}
       </header>
 
       <main className={padding}>
-        {tab === 'ask' && <Chat {...shared} />}
+        <div style={{ display: tab === 'ask' ? 'contents' : 'none' }}>
+          <Chat {...shared} onBack={() => setTab('browse')} />
+        </div>
         {tab === 'interpreter' && <Interpreter onShow={setShowing} rate={rate} toggleRate={toggleRate} stt={caps.stt} />}
         {tab === 'learn' && <Learn rate={rate} />}
 
@@ -106,13 +119,15 @@ export default function App() {
         )}
       </main>
 
-      <nav className="nav" aria-label="Sections">
-        {TABS.map(([id, label, icon]) => (
-          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined}>
-            <Icon name={icon} size={21} /><span>{id === 'saved' && favs.length ? `Saved ${favs.length}` : label}</span>
-          </button>
-        ))}
-      </nav>
+      {tab !== 'ask' && (
+        <nav className="nav" aria-label="Sections">
+          {TABS.map(([id, label, icon]) => (
+            <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined}>
+              <Icon name={icon} size={21} /><span>{id === 'saved' && favs.length ? `Saved ${favs.length}` : label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
 
       {toast && <div className="toast" role="status">{toast}</div>}
       {showing && <ShowMode phrase={showing} contrast={auto} onClose={() => setShowing(null)} />}
