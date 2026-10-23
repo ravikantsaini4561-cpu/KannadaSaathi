@@ -60,7 +60,11 @@ export default function Interpreter({ onShow, rate, toggleRate, stt }) {
   const rec = useRef(null);
   const end = useRef(null);
 
-  useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [log, busy]);
+  useEffect(() => {
+    if (log.length > 0 || busy) {
+      end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [log, busy]);
   useEffect(() => () => { try { rec.current?.abort?.(); } catch { /* ignore */ } }, []);
   const hint = (who) => (live !== who ? 'Tap to speak' : proc ? 'Transcribing...' : 'Listening... tap to stop');
   const pickMine = (v) => { if (v === theirs) setTheirs(mine); setMine(v); };

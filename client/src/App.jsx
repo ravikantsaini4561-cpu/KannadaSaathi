@@ -60,25 +60,19 @@ export default function App() {
   const padding = tab === 'ask' ? 'pad' : tab === 'interpreter' ? 'padi' : '';
 
   return (
-    <div className="app">
-      <header className="top">
-        {tab === 'ask' ? (
-          <button className="iconbtn back-btn" onClick={() => setTab('browse')} aria-label="Return back to phrases" title="Return back to phrases">
-            <Icon name="swap" size={20} />
-          </button>
-        ) : (
-          <div className="logo"><Icon name="translate" size={22} /></div>
-        )}
-        <div><h1>KannadaSaathi <span className="chip mint">Karnataka</span></h1><p><span className="kn-s">ಕನ್ನಡ ಸಾಥಿ</span> · {title}</p></div>
+    <div className={`app${tab === 'ask' ? ' ask-active' : ''}`}>
+      <header className={`top${tab === 'ask' ? ' ask-mode' : ''}`}>
+        <div className="logo"><Icon name="translate" size={22} /></div>
+        <div className="top-title"><h1>KannadaSaathi <span className="chip mint">Karnataka</span></h1><p><span className="kn-s">ಕನ್ನಡ ಸಾಥಿ</span> · {title}</p></div>
         {tab === 'ask' && (
           <button className="btn soft return-btn" onClick={() => setTab('browse')} aria-label="Return back">
-            <Icon name="swap" size={16} /> Return back
+            <Icon name="arrowLeft" size={16} /> <span>Return</span>
           </button>
         )}
       </header>
 
       <main className={padding}>
-        <div style={{ display: tab === 'ask' ? 'contents' : 'none' }}>
+        <div style={{ display: tab === 'ask' ? 'block' : 'none', width: '100%', minWidth: 0, maxWidth: '100%' }}>
           <Chat {...shared} onBack={() => setTab('browse')} />
         </div>
         {tab === 'interpreter' && <Interpreter onShow={setShowing} rate={rate} toggleRate={toggleRate} stt={caps.stt} />}
@@ -119,15 +113,13 @@ export default function App() {
         )}
       </main>
 
-      {tab !== 'ask' && (
-        <nav className="nav" aria-label="Sections">
-          {TABS.map(([id, label, icon]) => (
-            <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined}>
-              <Icon name={icon} size={21} /><span>{id === 'saved' && favs.length ? `Saved ${favs.length}` : label}</span>
-            </button>
-          ))}
-        </nav>
-      )}
+      <nav className={`nav${tab === 'ask' ? ' nav-hidden' : ''}`} aria-label="Sections" aria-hidden={tab === 'ask'}>
+        {TABS.map(([id, label, icon]) => (
+          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined} tabIndex={tab === 'ask' ? -1 : 0}>
+            <Icon name={icon} size={21} /><span>{id === 'saved' && favs.length ? `Saved ${favs.length}` : label}</span>
+          </button>
+        ))}
+      </nav>
 
       {toast && <div className="toast" role="status">{toast}</div>}
       {showing && <ShowMode phrase={showing} contrast={auto} onClose={() => setShowing(null)} />}

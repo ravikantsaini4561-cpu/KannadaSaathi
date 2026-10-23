@@ -167,7 +167,7 @@ function Answer({ m, ctx }) {
 export default function Chat(ctx) {
   const [messages, setMessages] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('ks-chat')) ?? [];
+      return JSON.parse(sessionStorage.getItem('ks-chat')) ?? [];
     } catch {
       return [];
     }
@@ -188,7 +188,7 @@ export default function Chat(ctx) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('ks-chat', JSON.stringify(messages));
+      sessionStorage.setItem('ks-chat', JSON.stringify(messages));
     } catch {
       // Storage unavailable.
     }
@@ -201,7 +201,7 @@ export default function Chat(ctx) {
     setAiLive(null);
     setErr('');
     try {
-      localStorage.removeItem('ks-chat');
+      sessionStorage.removeItem('ks-chat');
     } catch {
       // Storage unavailable.
     }
@@ -209,10 +209,12 @@ export default function Chat(ctx) {
   };
 
   useEffect(() => {
-    end.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'end'
-    });
+    if (messages.length > 0 || busy) {
+      end.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end'
+      });
+    }
   }, [messages, busy]);
 
   async function send(raw) {
