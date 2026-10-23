@@ -132,8 +132,8 @@ p {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
+  height: 100vh;
   height: 100dvh;
-  height: 100vh; /* fallback */
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -142,8 +142,8 @@ p {
 
 /* Sticky header in ask mode — sits at top of the flex column */
 .app.ask-active .top.ask-mode {
-  position: relative;
-  top: unset;
+  position: sticky;
+  top: 0;
   flex: none;
   width: 100%;
   margin: 0;
@@ -157,9 +157,7 @@ p {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding: 0 16px 12px;
-  /* reset bottom padding — composer is now a flex child below */
-  padding-bottom: 12px;
+  padding: 0 16px calc(88px + var(--safe-bottom));
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -191,13 +189,13 @@ p {
 
 /* Composer bar — taken OUT of fixed positioning, becomes flex child at bottom */
 .app.ask-active .fixbar.composer {
-  position: relative;
-  bottom: unset;
-  left: unset;
-  transform: none;
-  flex: none;
-  width: 100%;
-  margin: 0 0 calc(8px + var(--safe-bottom));
+  position: fixed;
+  bottom: calc(8px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(720px, calc(100% - 32px));
+  min-width: 0;
+  margin: 0;
   box-sizing: border-box;
 }
 
