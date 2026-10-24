@@ -5,13 +5,40 @@ import ShowMode from './components/ShowMode.jsx';
 import Chat from './components/Chat.jsx';
 import Interpreter from './components/Interpreter.jsx';
 import Learn from './components/Learn.jsx';
+import Scan from './components/Scan.jsx';
+import Practice from './components/Practice.jsx';
 import Icon from './components/Icon.jsx';
+import Emergency from './components/Emergency.jsx';
+import More from './components/More.jsx';
+import { useLang } from './i18n.jsx';
 
-const TABS = [['browse', 'Phrases', 'chat'], ['interpreter', 'Interpreter', 'swap'], ['learn', 'Learn', 'book'], ['ask', 'Ask Saathi', 'spark'], ['saved', 'Saved', 'heart']];
+const TABS = [
+  ['browse', 'n_browse', 'book'],
+  ['interpreter', 'n_interpreter', 'swap'],
+  ['scan', 'n_scan', 'camera'],
+  ['ask', 't_ask', 'chat'],
+  ['sos', 't_sos', 'shield']
+];
+
+const SUB = ['saved', 'practice', 'learn'];
+
+const TITLES = {
+  browse: 'n_browse',
+  interpreter: 'n_interpreter',
+  scan: 'n_scan',
+  learn: 'n_learn',
+  more: 'n_more',
+  ask: 't_ask',
+  saved: 't_saved',
+  practice: 't_practice',
+  sos: 't_sos'
+};
 const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage blocked */ } };
 
 export default function App() {
+  const {t} = useLang();
+
   const [tab, setTab] = useState('browse');
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState('');
@@ -26,6 +53,8 @@ export default function App() {
   const [auto, setAuto] = useState(() => read('ks-auto', false));
   const [caps, setCaps] = useState({ ai: false, aiOk: null, stt: false });
   const [toast, setToast] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { lang, setLang } = useLang();
 
   const refreshCaps = () => getHealth().then((h) => setCaps({ ai: Boolean(h.ai), aiOk: h.aiOk, stt: Boolean(h.stt) })).catch(() => {});
   useEffect(() => { refreshCaps(); }, []);
@@ -56,16 +85,29 @@ export default function App() {
   const names = Object.fromEntries(categories.map((c) => [c.id, c.name]));
   const shared = { favs, onFav: toggleFav, onShow: setShowing, rate, names, caps, refreshCaps };
   const list = tab === 'saved' ? saved : phrases;
-  const title = TABS.find((t) => t[0] === tab)[1];
+  const title = t(TITLES[tab] || 'n_browse');
   const padding = tab === 'ask' ? 'pad' : tab === 'interpreter' ? 'padi' : '';
+  const openDrawerTab = (nextTab) => {
+    setMenuOpen(false);
+    setTab(nextTab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className={`app${tab === 'ask' ? ' ask-active' : ''}`}>
       <header className={`top${tab === 'ask' ? ' ask-mode' : ''}`}>
         <div className="logo"><Icon name="translate" size={22} /></div>
         <div className="top-title"><h1>KannadaSaathi <span className="chip mint">Karnataka</span></h1><p><span className="kn-s">ಕನ್ನಡ ಸಾಥಿ</span> · {title}</p></div>
+        <button className="hamburger iconbtn" onClick={() => setMenuOpen(true)} aria-label="Open menu">
+          <Icon name="menu" size={22} />
+        </button>
         {tab === 'ask' && (
           <button className="btn soft return-btn" onClick={() => setTab('browse')} aria-label="Return back">
+            <Icon name="arrowLeft" size={16} /> <span>Return</span>
+          </button>
+        )}
+        {SUB.includes(tab) && tab !== 'learn' && (
+          <button className="btn soft return-btn secondary-return" onClick={() => setTab('browse')} aria-label="Return to phrases">
             <Icon name="arrowLeft" size={16} /> <span>Return</span>
           </button>
         )}
@@ -73,10 +115,26 @@ export default function App() {
 
       <main className={padding}>
         <div style={{ display: tab === 'ask' ? 'block' : 'none', width: '100%', minWidth: 0, maxWidth: '100%' }}>
-          <Chat {...shared} onBack={() => setTab('browse')} />
+          <Chat {...shared} onBack={() => setTab('more')} />
         </div>
         {tab === 'interpreter' && <Interpreter onShow={setShowing} rate={rate} toggleRate={toggleRate} stt={caps.stt} />}
         {tab === 'learn' && <Learn rate={rate} />}
+        {tab === 'practice' && <Practice rate={rate} />}
+        {tab === 'scan' && <Scan onShow={setShowing} rate={rate} />}
+
+        {tab === 'sos' && (
+  <Emergency onShow={setShowing} rate={rate} />
+)}
+
+{SUB.includes(tab) && (
+  <button
+    className="btn soft x-backmore"
+    onClick={() => setTab('more')}
+  >
+    <Icon name="arrowLeft" size={16} />
+    {t('back_more')}
+  </button>
+)}
 
         {tab === 'browse' && (
           <>
@@ -113,13 +171,46 @@ export default function App() {
         )}
       </main>
 
-      <nav className={`nav${tab === 'ask' ? ' nav-hidden' : ''}`} aria-label="Sections" aria-hidden={tab === 'ask'}>
-        {TABS.map(([id, label, icon]) => (
-          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined} tabIndex={tab === 'ask' ? -1 : 0}>
-            <Icon name={icon} size={21} /><span>{id === 'saved' && favs.length ? `Saved ${favs.length}` : label}</span>
-          </button>
-        ))}
+      <nav className="nav" aria-label="Sections">
+      {TABS.map(([id, label, icon]) => {
+  const active = tab === id;
+
+  return (
+    <button
+      key={id}
+      className={active ? 'on' : ''}
+      onClick={() => setTab(id)}
+      aria-current={active ? 'page' : undefined}
+    >
+      <Icon name={icon} size={21} />
+      <span>{t(label)}</span>
+    </button>
+  );
+})}
       </nav>
+
+      {menuOpen && (
+        <>
+          <button className="menu-backdrop" onClick={() => setMenuOpen(false)} aria-label="Close menu" />
+          <aside className="hamburger-menu menu-left" aria-label="More options">
+            <div className="menu-head">
+              <b>Menu</b>
+              <button className="iconbtn" onClick={() => setMenuOpen(false)} aria-label="Close menu"><Icon name="x" size={20} /></button>
+            </div>
+            <button className="menu-row" onClick={() => openDrawerTab('learn')}><span className="menu-icon"><Icon name="book" size={20} /></span><span><b>Learn</b><small>Kannada words and lessons</small></span></button>
+            <button className="menu-row" onClick={() => openDrawerTab('practice')}><span className="menu-icon"><Icon name="mic" size={20} /></span><span><b>Practice Talking</b><small>Role-play everyday situations</small></span></button>
+            <button className="menu-row" onClick={() => openDrawerTab('saved')}><span className="menu-icon"><Icon name="heart" size={20} /></span><span><b>Saved Phrases</b><small>{favs.length} saved phrase{favs.length === 1 ? '' : 's'}</small></span></button>
+            <button className="menu-row" onClick={() => openDrawerTab('browse')}><span className="menu-icon"><Icon name="wifiOff" size={20} /></span><span><b>Works Offline</b><small>Use saved content without internet</small></span></button>
+            <div className="menu-language">
+              <b><Icon name="globe" size={18} /> App Language</b>
+              <div className="x-seg" role="group" aria-label="App Language">
+                <button className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')} aria-pressed={lang === 'en'}>English</button>
+                <button className={lang === 'kn' ? 'on' : ''} onClick={() => setLang('kn')} aria-pressed={lang === 'kn'}>ಕನ್ನಡ</button>
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
 
       {toast && <div className="toast" role="status">{toast}</div>}
       {showing && <ShowMode phrase={showing} contrast={auto} onClose={() => setShowing(null)} />}
