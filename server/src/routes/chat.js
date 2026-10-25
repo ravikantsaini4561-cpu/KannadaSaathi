@@ -1,6 +1,13 @@
+
 import { Router } from 'express';
 import { getAll, categories, score } from '../store.js';
-import { aiEnabled, gemini, limited } from '../ai.js';
+import {
+  aiEnabled,
+  gemini,
+  limited,
+  parseJson,
+  str
+} from '../ai.js';
 
 const router = Router();
 
@@ -12,11 +19,13 @@ const topics = {
   ],
   food: [
     'food', 'canteen', 'mess', 'hostel', 'coffee', 'tea',
-    'hungry', 'water', 'spicy', 'eat', 'lunch', 'dinner'
+    'hungry', 'water', 'spicy', 'eat', 'lunch', 'dinner',
+    'restaurant', 'menu', 'breakfast'
   ],
   transport: [
     'bus', 'auto', 'rickshaw', 'metro', 'train', 'station',
-    'fare', 'ticket', 'route', 'ride', 'drop', 'bargain'
+    'fare', 'ticket', 'route', 'ride', 'drop', 'bargain',
+    'price', 'address'
   ],
   healthcare: [
     'sick', 'fever', 'doctor', 'hospital', 'medicine',
@@ -25,16 +34,18 @@ const topics = {
   ],
   village: [
     'village', 'villager', 'farm', 'farmer', 'rural',
-    'homestay', 'photo'
+    'homestay', 'photo', 'room', 'stay'
   ],
-  beach: ['beach', 'sea', 'swim', 'boat', 'sand', 'sunset'],
+  beach: [
+    'beach', 'sea', 'swim', 'boat', 'sand', 'sunset'
+  ],
   hills: [
     'hill', 'hills', 'trek', 'trekking', 'viewpoint',
     'cold', 'ghat', 'coorg', 'chikmagalur'
   ],
   mall: [
     'mall', 'shop', 'shopping', 'size', 'discount',
-    'upi', 'trial', 'clothes'
+    'upi', 'trial', 'clothes', 'price', 'money'
   ],
   festival: [
     'festival', 'temple', 'procession', 'dasara', 'ugadi',
@@ -107,19 +118,64 @@ const hindiTerms = {
   'पता': 'address'
 };
 
-const system = `You are Saathi, a friendly assistant helping people communicate in Kannada.
+const system = `You are Saathi, the friendly conversational assistant
+inside KannadaSaathi.
 
-Return valid JSON only, without markdown:
+Your primary goal is to help people understand and speak natural Kannada
+in everyday situations in Karnataka.
+
+CONVERSATION:
+- Understand the current message together with previous messages.
+- Remember the context present in the supplied conversation history.
+- Answer follow-up questions such as "what about the price?",
+  "tell me more", "how do I say that?", and "what should I reply?"
+  using the earlier conversation where possible.
+- Do not treat every message as a completely new conversation.
+- Do not repeat your introduction or greeting unnecessarily.
+- Ask at most one short clarification question when essential context
+  is genuinely missing.
+- Never pretend to remember messages that are not in the supplied history.
+
+LANGUAGE:
+- Understand English, Hindi, Devanagari, Roman Kannada, Kannada script,
+  and messages mixing these languages.
+- Write the message field naturally in the language the user is using.
+- Whenever relevant to speaking Kannada, provide Kannada script,
+  its Roman transliteration, its English meaning, useful vocabulary,
+  and a short practical tip.
+- Use natural Kannada rather than a word-for-word translation.
+- Roman transliteration should be easy for a learner to read.
+- Do not translate a follow-up phrase without considering its context.
+
+PHRASE LIBRARY:
+- Treat the supplied library phrases as trusted examples.
+- Prefer relevant library phrases when they fit the request.
+- Do not claim that a phrase was verified if it was not supplied.
+- General questions can be answered without forcing an unrelated phrase.
+
+FACTUAL SAFETY:
+- Never invent prices, bus fares, opening hours, availability,
+  addresses, distances, or other factual details.
+- If a requested live fact is unknown, say so clearly.
+- Do not claim that you checked live information unless you did.
+- You are not a doctor. Do not diagnose medical conditions.
+- For a medical emergency, include "Call 112 or 108 now" in message.
+
+OUTPUT:
+Return valid JSON only. Do not use Markdown fences.
+Use exactly this shape:
 {
-  "message": "1-2 friendly sentences in the user's language",
-  "kannada": "the most useful Kannada sentence to say, or empty string",
-  "reading": "Roman transliteration of the Kannada sentence",
-  "meaning": "English meaning",
+  "message": "A helpful, natural answer in the user's language",
+  "kannada": "Useful Kannada sentence, or empty string",
+  "reading": "Roman transliteration, or empty string",
+  "meaning": "English meaning, or empty string",
   "words": [{"kn":"","roman":"","en":""}],
-  "tip": "one short etiquette tip or an empty string"
+  "tip": "One useful short tip, or empty string"
 }
 
-Use Hindi when the user writes in Hindi. Always provide Kannada in Kannada script and its reading in Roman script. Use the supplied phrase library when relevant, and do not invent prices, timings, or facts. You are not a doctor. For a medical emergency, include "Call 112 or 108 now" in the message.`;
+For a general question unrelated to learning or speaking Kannada,
+answer the question in message and leave the Kannada-learning fields
+empty when a Kannada phrase would not help.`;
 
 function extractWords(message) {
   const rawWords =
@@ -128,192 +184,185 @@ function extractWords(message) {
     ) || [];
 
   const words = new Set();
-  let hasHindiMapping = false;
 
   for (const word of rawWords) {
     if (hindiTerms[word]) {
       words.add(hindiTerms[word]);
-      hasHindiMapping = true;
       continue;
     }
 
-    // Ignore unmatched Hindi words; keep English and Kannada words.
-    if (/^[\u0900-\u097f]+$/u.test(word)) continue;
+    // Keep English, numbers and Kannada words.
+    // Unmapped Hindi words remain available to the AI through message.
+    if (/^[\u0900-\u097f]+$/u.test(word)) {
+      continue;
+    }
 
     if (word.length > 1) {
       words.add(word);
     }
   }
 
-  return {
-    words: [...words],
-    hasHindiMapping
-  };
+  return [...words];
 }
 
 function parse(raw) {
   try {
-    const match = String(raw).match(/\{[\s\S]*\}/);
+    const result = parseJson(raw);
 
-    if (!match) {
-      throw new Error('Gemini response did not contain JSON.');
+    if (
+      !result ||
+      typeof result !== 'object' ||
+      Array.isArray(result)
+    ) {
+      throw new Error('Unexpected AI response format.');
     }
 
-    const result = JSON.parse(match[0]);
-    const str = (value) =>
-      typeof value === 'string' ? value : String(value || '');
+    const kannada = str(result.kannada, 500).trim();
 
-    const card = result.kannada
+    const words = Array.isArray(result.words)
+      ? result.words.slice(0, 4).map((word) => ({
+          kn: str(word?.kn, 100),
+          roman: str(word?.roman, 120),
+          en: str(word?.en, 120)
+        }))
+      : [];
+
+    const card = kannada
       ? {
-          kannada: str(result.kannada),
-          reading: str(result.reading),
-          meaning: str(result.meaning),
-          tip: str(result.tip),
-          words: (Array.isArray(result.words) ? result.words : [])
-            .slice(0, 4)
-            .map((word) => ({
-              kn: str(word.kn),
-              roman: str(word.roman),
-              en: str(word.en)
-            }))
+          kannada,
+          reading: str(result.reading, 500),
+          meaning: str(result.meaning, 500),
+          tip: str(result.tip, 300),
+          words
         }
       : null;
 
     return {
-      message: str(result.message) || 'Here you go.',
+      message:
+        str(result.message, 1200).trim() ||
+        'I am here to help. Please tell me a little more.',
       card
     };
-  } catch {
+  } catch (error) {
+    console.error('Ask Saathi response parsing failed:', error.message);
+
     return {
-      message: 'Sorry, I could not prepare that answer. Please try again.',
+      message:
+        'I could not prepare that answer correctly. Please try again.',
       card: null
     };
   }
+}
+
+function makeHistory(rawHistory) {
+  const history = (
+    Array.isArray(rawHistory) ? rawHistory : []
+  )
+    .filter(
+      (item) =>
+        ['user', 'assistant'].includes(item?.role) &&
+        typeof item.content === 'string' &&
+        item.content.trim()
+    )
+    .slice(-10)
+    .map((item) => ({
+      role: item.role,
+      content: item.content.slice(0, 900)
+    }));
+
+  // The AI conversation must begin with a user message.
+  while (history.length && history[0].role !== 'user') {
+    history.shift();
+  }
+
+  return history;
 }
 
 router.post('/chat', async (req, res) => {
   try {
     const message = String(req.body?.message || '')
       .trim()
-      .slice(0, 200);
+      .slice(0, 500);
 
     if (!message) {
       return res.json({
-        reply: 'Tell me what you need, and I will help you say it in Kannada.',
+        reply:
+          'Tell me what you need, and I will help you communicate in Kannada.',
         phrases: [],
-        card: null
+        card: null,
+        ai: false
       });
     }
 
     const hindiInput = /[\u0900-\u097f]/u.test(message);
-    const { words, hasHindiMapping } = extractWords(message);
+    const words = extractWords(message);
 
-    if (
-      /^(hi|hello|hey|namaste|namaskara)\b/i.test(message) ||
-      /^नमस्ते/u.test(message.trim())
-    ) {
-      return res.json({
-        reply: hindiInput
-          ? 'आप यह दोस्ताना कन्नड़ अभिवादन कह सकते हैं:'
-          : 'Here is a friendly Kannada greeting you can say.',
-        card: {
-          kannada: 'ನಮಸ್ಕಾರ! ನನ್ನ ಹೆಸರು ಸಾಥಿ.',
-          reading: 'Namaskāra! Nanna hesaru Saathi.',
-          meaning: 'Hello! My name is Saathi.',
-          words: [
-            { kn: 'ನಮಸ್ಕಾರ', roman: 'Namaskāra', en: 'Hello' },
-            { kn: 'ನನ್ನ', roman: 'Nanna', en: 'My' },
-            { kn: 'ಹೆಸರು', roman: 'hesaru', en: 'name' }
-          ],
-          tip: 'Use Namaskara as a polite greeting.'
-        },
-        phrases: [],
-        ai: false
-      });
+    let ranked = [];
+    let label = 'your situation';
+
+    // Search the library when available, but never let a library
+    // result prevent the AI from understanding the conversation.
+    try {
+      const all = await getAll();
+
+      const topicHits = Object.entries(topics)
+        .map(([topic, keywords]) => [
+          topic,
+          words.filter((word) => keywords.includes(word)).length
+        ])
+        .sort((a, b) => b[1] - a[1]);
+
+      const topic =
+        topicHits[0]?.[1] > 0 ? topicHits[0][0] : undefined;
+
+      const pool = topic
+        ? all.filter((phrase) => phrase.category === topic)
+        : all;
+
+      ranked = pool
+        .map((phrase) => ({
+          phrase,
+          score: score(phrase, words)
+        }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map((item) => item.phrase);
+
+      label =
+        categories.find((category) => category.id === topic)?.name ||
+        'your situation';
+    } catch (error) {
+      console.error('Phrase library lookup failed:', error.message);
     }
 
-    if (!words.length) {
-      return res.json({
-        reply: hindiInput
-          ? 'कृपया अपनी ज़रूरत बताइए, जैसे डॉक्टर, अस्पताल, बस या खाना।'
-          : 'Tell me what you need, such as a doctor, hospital, bus or food.',
-        phrases: [],
-        card: null,
-        ai: false
-      });
-    }
+    const known = ranked
+      .map((phrase) => {
+        const english = str(phrase.english, 180);
+        const kannada = str(phrase.kannada, 180);
+        const roman = str(phrase.transliteration, 180);
 
-    const all = await getAll();
+        return `${english} = ${kannada} (${roman})`;
+      })
+      .join('\n');
 
-    const hits = Object.entries(topics)
-      .map(([topic, keywords]) => [
-        topic,
-        words.filter((word) => keywords.includes(word)).length
-      ])
-      .sort((a, b) => b[1] - a[1]);
-
-    const topic = hits[0]?.[1] > 0 ? hits[0][0] : undefined;
-
-    const pool = topic
-      ? all.filter((phrase) => phrase.category === topic)
-      : all;
-
-    const ranked = pool
-      .map((phrase) => ({
-        phrase,
-        score: score(phrase, words)
-      }))
-      .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3)
-      .map((item) => item.phrase);
-
-    const label =
-      categories.find((category) => category.id === topic)?.name ||
-      'your message';
-
-    // Return useful saved phrases directly for mapped Hindi queries.
-    if (hindiInput && hasHindiMapping && ranked.length > 0) {
-      return res.json({
-        reply: 'आपके लिए ये कन्नड़ वाक्य उपयोगी हो सकते हैं।',
-        phrases: ranked,
-        card: null,
-        ai: false
-      });
-    }
-
-    if (aiEnabled() && !limited(req.ip)) {
+    if (aiEnabled() && !limited(req.ip, 'chat', 30)) {
       try {
-        const history = (
-          Array.isArray(req.body?.history) ? req.body.history : []
-        )
-          .filter(
-            (item) =>
-              ['user', 'assistant'].includes(item.role) &&
-              typeof item.content === 'string' &&
-              item.content.trim()
-          )
-          .slice(-6)
-          .map((item) => ({
-            role: item.role,
-            content: item.content.slice(0, 500)
-          }));
+        const history = makeHistory(req.body?.history);
 
-        while (history.length && history[0].role !== 'user') {
-          history.shift();
-        }
+        const contextualSystem = `${system}
 
-        const known = ranked
-          .map(
-            (phrase) =>
-              `${phrase.english} = ${phrase.kannada} (${phrase.transliteration})`
-          )
-          .join('; ');
+Relevant phrase-library results for the current request:
+${known || 'No relevant library phrase was found.'}
+
+Use these phrases only when relevant. The latest message is the user's
+new message; understand it in the context of the conversation history.`;
 
         const raw = await gemini(
-          `${system}\nPhrases from our library that may fit: ${known || 'none'}`,
+          contextualSystem,
           [...history, { role: 'user', content: message }],
-          700
+          900,
+          { temperature: 0.4 }
         );
 
         const { message: reply, card } = parse(raw);
@@ -321,26 +370,71 @@ router.post('/chat', async (req, res) => {
         return res.json({
           reply,
           card,
-          phrases: [],
+          phrases: ranked,
           ai: true
         });
       } catch (error) {
-        console.error('Gemini chat failed:', error.message);
+        console.error('Ask Saathi AI failed:', error.message);
       }
     }
 
-    const reply = ranked.length
-      ? hindiInput
-        ? `आपके लिए ${label} से जुड़े कन्नड़ वाक्य मिले हैं।`
-        : `Here are phrases for ${label}. Tap Show to display one to the other person.`
-      : hindiInput
-        ? 'मुझे अभी इसके लिए कोई वाक्य नहीं मिला। डॉक्टर, अस्पताल, बस या भोजन जैसी ज़रूरत बताकर पूछें।'
-        : 'I could not find a phrase for that yet. Try a place or a need: bus, village, beach, canteen, doctor.';
+    // Safe, predictable fallback if AI is unavailable or rate-limited.
+    const greeting =
+      /^(hi|hello|hey|namaste|namaskara|ನಮಸ್ಕಾರ|ನಮಸ್ತೆ)[!. ]*$/iu
+        .test(message);
+
+    const emergency =
+      /(emergency|urgent|ambulance|heart attack|cannot breathe|can't breathe|बेहोश|सांस नहीं|सीने में दर्द)/iu
+        .test(message);
+
+    if (emergency) {
+      return res.json({
+        reply:
+          'If this is a medical emergency in India, call 112 or 108 now. Please seek immediate local help.',
+        card: null,
+        phrases: ranked,
+        ai: false
+      });
+    }
+
+    if (greeting) {
+      return res.json({
+        reply: hindiInput
+          ? 'नमस्ते! मैं आपकी Kannada बोलने में मदद करूँगा।'
+          : 'Namaskara! I am here to help you speak Kannada.',
+        card: {
+          kannada: 'ನಮಸ್ಕಾರ! ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?',
+          reading: 'Namaskara! Nimage hege sahaya madali?',
+          meaning: 'Hello! How can I help you?',
+          words: [
+            { kn: 'ನಮಸ್ಕಾರ', roman: 'Namaskara', en: 'Hello' },
+            { kn: 'ನಿಮಗೆ', roman: 'Nimage', en: 'To you' },
+            { kn: 'ಸಹಾಯ', roman: 'Sahaya', en: 'Help' }
+          ],
+          tip: 'Namaskara is a polite greeting.'
+        },
+        phrases: ranked,
+        ai: false
+      });
+    }
+
+    if (ranked.length) {
+      return res.json({
+        reply: hindiInput
+          ? `आपके लिए ${label} से जुड़े कन्नड़ वाक्य मिले हैं।`
+          : `Here are Kannada phrases related to ${label}.`,
+        card: null,
+        phrases: ranked,
+        ai: false
+      });
+    }
 
     return res.json({
-      reply,
+      reply: hindiInput
+        ? 'अभी AI उपलब्ध नहीं है और मुझे इस सवाल का सटीक जवाब नहीं मिला। थोड़ी और जानकारी देकर पूछें।'
+        : 'The AI assistant is temporarily unavailable, and I could not find a matching saved phrase. Please try again shortly.',
       card: null,
-      phrases: ranked,
+      phrases: [],
       ai: false
     });
   } catch (error) {

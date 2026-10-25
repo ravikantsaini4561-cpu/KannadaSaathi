@@ -101,7 +101,7 @@ export default function App() {
         <button className="hamburger iconbtn" onClick={() => setMenuOpen(true)} aria-label="Open menu">
           <Icon name="menu" size={22} />
         </button>
-        {tab === 'ask' && (
+        {(tab === 'ask' || tab === 'interpreter') && (
           <button className="btn soft return-btn" onClick={() => setTab('browse')} aria-label="Return back">
             <Icon name="arrowLeft" size={16} /> <span>Return</span>
           </button>

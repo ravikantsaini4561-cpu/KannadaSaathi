@@ -1,7 +1,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { sendChat } from '../api.js';
-import { canSpeak, listenAuto, speak, stopSpeaking } from '../speech.js';
+import {
+  canSpeak,
+  listenAuto,
+  speak,
+  stopSpeaking
+} from '../speech.js';
 import PhraseCard from './PhraseCard.jsx';
 import Icon from './Icon.jsx';
 
@@ -49,6 +54,60 @@ const ideas = [
   ['🚪', 'Ask permission', 'How do I politely ask permission to enter a room or place in Kannada?']
 ];
 
+function buildHistoryContent(message) {
+  const parts = [String(message.text || '')];
+
+  if (message.card) {
+    if (message.card.kannada) {
+      parts.push(`Kannada: ${message.card.kannada}`);
+    }
+
+    if (message.card.reading) {
+      parts.push(`Roman reading: ${message.card.reading}`);
+    }
+
+    if (message.card.meaning) {
+      parts.push(`Meaning: ${message.card.meaning}`);
+    }
+
+    if (message.card.tip) {
+      parts.push(`Learning tip: ${message.card.tip}`);
+    }
+
+    if (Array.isArray(message.card.words)) {
+      const vocabulary = message.card.words
+        .slice(0, 4)
+        .map((word) => {
+          return `${word.kn || ''} (${word.roman || ''}) = ${word.en || ''}`;
+        })
+        .filter(Boolean);
+
+      if (vocabulary.length) {
+        parts.push(`Vocabulary: ${vocabulary.join('; ')}`);
+      }
+    }
+  }
+
+  if (Array.isArray(message.phrases)) {
+    const phrases = message.phrases
+      .slice(0, 3)
+      .map((phrase) => {
+        const english = phrase.english || '';
+        const kannada = phrase.kannada || '';
+        const roman =
+          phrase.transliteration || phrase.reading || '';
+
+        return `${english} = ${kannada} (${roman})`;
+      });
+
+    if (phrases.length) {
+      parts.push(`Suggested phrases: ${phrases.join('; ')}`);
+    }
+  }
+
+  return parts.filter(Boolean).join('\n').slice(0, 1200);
+}
+
 function Answer({ m, ctx }) {
   const [copied, setCopied] = useState(false);
   const c = m.card;
@@ -60,7 +119,7 @@ function Answer({ m, ctx }) {
     try {
       await navigator.clipboard.writeText(c.kannada);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      window.setTimeout(() => setCopied(false), 1500);
     } catch {
       // Clipboard may be unavailable.
     }
@@ -80,6 +139,7 @@ function Answer({ m, ctx }) {
             <div className="kcard">
               <div className="row between">
                 <span className="chip mint">Say this</span>
+
                 {canSpeak && (
                   <button
                     className="chip ind"
@@ -92,13 +152,20 @@ function Answer({ m, ctx }) {
               </div>
 
               <p className="kn big">{c.kannada}</p>
-              {c.reading && <p className="roman lg">{c.reading}</p>}
-              {c.meaning && <p className="mean">“{c.meaning}”</p>}
+
+              {c.reading && (
+                <p className="roman lg">{c.reading}</p>
+              )}
+
+              {c.meaning && (
+                <p className="mean">“{c.meaning}”</p>
+              )}
             </div>
 
             {c.words?.length > 0 && (
               <>
                 <p className="label sm">WORD BREAKDOWN</p>
+
                 <div className="words">
                   {c.words.map((word, i) => (
                     <div key={i} className="wtile">
@@ -172,6 +239,7 @@ export default function Chat(ctx) {
       return [];
     }
   });
+
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [aiLive, setAiLive] = useState(null);
@@ -184,7 +252,8 @@ export default function Chat(ctx) {
   const rec = useRef(null);
   const speechRun = useRef(0);
 
-  const aiOn = aiLive ?? (ctx.caps.ai && ctx.caps.aiOk !== false);
+  const aiOn =
+    aiLive ?? (ctx.caps.ai && ctx.caps.aiOk !== false);
 
   useEffect(() => {
     try {
@@ -197,14 +266,17 @@ export default function Chat(ctx) {
   const newChat = () => {
     speechRun.current += 1;
     stopSpeaking();
+
     setMessages([]);
     setAiLive(null);
     setErr('');
+
     try {
       sessionStorage.removeItem('ks-chat');
     } catch {
       // Storage unavailable.
     }
+
     ctx.refreshCaps();
   };
 
@@ -219,21 +291,27 @@ export default function Chat(ctx) {
 
   async function send(raw) {
     const message = raw.trim();
+
     if (!message || busy) return;
 
     speechRun.current += 1;
     stopSpeaking();
 
+    // Include earlier messages and their Kannada-learning cards
+    // so follow-up questions have more useful context.
     const history = messages
       .filter((m) => !m.error && m.text)
       .map((m) => ({
         role: m.from === 'me' ? 'user' : 'assistant',
-        content: m.text
+        content: m.from === 'me'
+          ? String(m.text || '').slice(0, 900)
+          : buildHistoryContent(m)
       }));
 
     setText('');
     setErr('');
     setBusy(true);
+
     setMessages((previous) => [
       ...previous,
       { from: 'me', text: message }
@@ -259,13 +337,14 @@ export default function Chat(ctx) {
         setAiLive(r.ai);
       }
 
-      // Speak the AI card, or speak each returned Kannada phrase in order.
+      // Speak the Kannada card or returned Kannada phrases.
       const toSpeak = r.card?.kannada
         ? [r.card.kannada]
         : phrases
             .map((phrase) => phrase.kannada)
             .filter(
-              (line) => typeof line === 'string' && line.trim()
+              (line) =>
+                typeof line === 'string' && line.trim()
             );
 
       if (canSpeak && toSpeak.length > 0) {
@@ -288,7 +367,9 @@ export default function Chat(ctx) {
         {
           from: 'bot',
           error: true,
-          text: error.message || 'Could not get a response. Please try again.',
+          text:
+            error.message ||
+            'Could not get a response. Please try again.',
           card: null,
           phrases: []
         }
@@ -305,6 +386,7 @@ export default function Chat(ctx) {
       } catch {
         // The recorder may already have stopped.
       }
+
       return;
     }
 
@@ -340,9 +422,12 @@ export default function Chat(ctx) {
               <div className="avatar">
                 <Icon name="spark" size={30} />
               </div>
+
               <div>
                 <h2>Saathi (ಸಾಥಿ)</h2>
-                <span className="chip lav up">AI companion</span>
+                <span className="chip lav up">
+                  AI companion
+                </span>
               </div>
             </div>
 
@@ -353,13 +438,14 @@ export default function Chat(ctx) {
 
             <div className="row">
               <span className="chip ind">
-                {aiOn ? 'Powered by Gemini' : 'Basic mode: saved phrases'}
+                {aiOn ? 'AI assistant available' : 'Basic mode: saved phrases'}
               </span>
             </div>
 
             {!ctx.caps.ai && (
               <p className="hint">
-                Add GEMINI_API_KEY on the server for full AI answers.
+                Configure GEMINI_API_KEY or GROQ_API_KEY on the server
+                for AI-powered answers.
               </p>
             )}
 
